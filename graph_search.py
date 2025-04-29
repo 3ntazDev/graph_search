@@ -1,45 +1,51 @@
-import tkinter as tk
-from tkinter import messagebox
-from collections import deque
-import heapq
-import random
+import tkinter as tk  # عشان استخدام مكتبة tkinter لإنشاء واجهة المستخدم الرسومية
+from tkinter import messagebox  # عشان اعرض رسائل الخطأ
+from collections import deque  # عشان استخدام deque في خوارزمية BFS
+import heapq  # عشان استخدام heapq في خوارزمية A* توجد لي min Heap
+import random  # عشان استخدام random لإضافة العقد والروابط بشكل عشوائي
 
 class GraphApp:
-    def __init__(self, root):
+    def __init__(self, root):  # دالة الكونستركتر هنا
         self.root = root
         self.root.title("خوارزميات البحث في الرسوم البيانية")
         self.root.geometry("700x500")
-        
-        # بيانات الرسم البياني
+
+        # تقدر تقول المتغيرات اللي راح نغزن فيها للرسم
         self.nodes = {}
         self.edges = []
         self.start = None
         self.goal = None
         
+        # لتخزين الـ Union-Find
+        self.parent = {}
+        self.rank = {}
+
         # إنشاء الواجهة
         self.canvas = tk.Canvas(root, bg="white")
         self.canvas.pack(fill=tk.BOTH, expand=True)
-        
+
         # شريط الأدوات
         toolbar = tk.Frame(root)
         toolbar.pack(fill=tk.X)
-        
+
+        # هنا الازارات اللي راح نستخدمها
         buttons = [
             ("إضافة عقدة", self.add_node),
             ("إضافة رابط", self.add_edge),
             ("BFS", lambda: self.search("BFS")),
             ("DFS", lambda: self.search("DFS")),
             ("A*", lambda: self.search("A*")),
-            ("مسح", self.clear)
+            ("مسح", self.clear),
+            ("دمج العقد", self.union_find)  # زر الدمج
         ]
-        
+
         for text, command in buttons:
             tk.Button(toolbar, text=text, command=command).pack(side=tk.LEFT)
-        
+
         # ربط أحداث الماوس
         self.canvas.bind("<Button-1>", self.on_click)
         self.canvas.bind("<B1-Motion>", self.on_drag)
-    
+     
     def add_node(self):
         # إضافة عقدة في موقع عشوائي
         node_id = f"N{len(self.nodes)+1}"
@@ -219,6 +225,39 @@ class GraphApp:
         self.start = None
         self.goal = None
         self.canvas.delete("all")
+
+    def union_find(self):
+        # خوارزمية Union-Find
+        def find(x):
+            # البحث في الـ parent لإيجاد الجذر
+            if self.parent[x] != x:
+                self.parent[x] = find(self.parent[x])  # الـ Path compression
+            return self.parent[x]
+
+        def union(x, y):
+            # دمج المجموعات باستخدام الـ Rank
+            rootX = find(x)
+            rootY = find(y)
+
+            if rootX != rootY:
+                if self.rank[rootX] > self.rank[rootY]:
+                    self.parent[rootY] = rootX
+                elif self.rank[rootX] < self.rank[rootY]:
+                    self.parent[rootX] = rootY
+                else:
+                    self.parent[rootY] = rootX
+                    self.rank[rootX] += 1
+        
+        # هنا نبدأ في تهيئة الـ parent والـ rank لكل عقدة
+        for node in self.nodes:
+            self.parent[node] = node
+            self.rank[node] = 0
+        
+        # نفترض أن كل رابط بين عقدتين نقوم بدمجهما
+        for a, b, _ in self.edges:
+            union(a, b)
+        
+        messagebox.showinfo("Union-Find", "تم دمج المجموعات بنجاح!")
 
 if __name__ == "__main__":
     root = tk.Tk()
